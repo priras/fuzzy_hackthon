@@ -1,0 +1,16 @@
+# Secrets — never commit your real key
+.env
+
+# OpenCode local state
+.opencode/cache/
+.opencode/state/
+
+# OS / editor noise
+.DS_Store
+*.swp
+.obsidian/
+.logseq/
+
+# Keep the memory/ folder, but if you'd rather not commit your agent's notes,
+# uncomment the next line:
+# memory/*.md

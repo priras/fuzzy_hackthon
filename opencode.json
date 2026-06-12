@@ -1,0 +1,24 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "openrouter/deepseek/deepseek-chat",
+  "small_model": "openrouter/qwen/qwen3-coder",
+  "shell": "pwsh",
+  "provider": {
+    "openrouter": {
+      "models": {
+        "deepseek/deepseek-chat": {},
+        "qwen/qwen3-coder": {}
+      },
+      "options": {
+        "apiKey": "{env:OPENROUTER_API_KEY}"
+      }
+    }
+  },
+  "mcp": {
+    "notion": {
+      "type": "remote",
+      "url": "https://mcp.notion.com/mcp",
+      "enabled": false
+    }
+  }
+}

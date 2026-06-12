@@ -1,0 +1,337 @@
+Here’s the **updated full Codex prompt** with **persistence and memory** added.
+
+Build an MVP web app for a hackathon project called **MoneyMirror**.
+
+MoneyMirror is a student money-saving AI agent. It helps students understand where their money is going, spot spending patterns, find student discounts or cheaper alternatives, remember user preferences over time, and create realistic weekly action plans.
+
+The app should be simple, clean, and demo-ready.
+
+Core goal:
+A user pastes anonymised sample transactions and optionally enters their interests, goals, weekly schedule, and preferences. The AI agent analyses the data, remembers useful context, and returns personalised insights and actions.
+
+Build the MVP with these features:
+
+1. Transaction input
+
+* Create a text area where the user can paste sample spending data.
+* Example format:
+
+  * 12 Jun, Tesco, £18.40
+  * 13 Jun, Uber Eats, £21.99
+  * 13 Jun, Starbucks, £5.20
+  * 14 Jun, Trainline, £9.80
+  * 15 Jun, Netflix, £10.99
+* Also allow optional CSV upload if easy, but pasted text is the priority.
+
+2. Categorisation
+
+* Categorise spending into groups such as:
+
+  * Groceries
+  * Takeaway / eating out
+  * Cafés / drinks
+  * Transport
+  * Subscriptions
+  * Shopping
+  * Social spending
+  * Sports / fitness
+  * Movies / entertainment
+  * Other
+* Show a category breakdown with totals.
+
+3. Calculator-style analysis
+
+* Calculate:
+
+  * total spending
+  * spending per category
+  * percentage of total per category
+  * top 3 spending categories
+  * possible estimated savings
+* Do not rely only on AI guessing for maths. Use code for calculations where possible.
+
+4. AI agent reasoning
+   The AI agent should:
+
+* explain where the user’s money is going
+* identify behaviour patterns, not just totals
+* ask or use follow-up information about the user’s goals
+* give supportive, non-judgemental advice
+* avoid shame-based language
+* avoid giving official financial advice
+
+5. User goals
+   Add a field where the user can choose or type a goal, such as:
+
+* Save money this week
+* Reduce stress spending
+* Spend smarter on things I enjoy
+* Cut grocery costs
+* Reduce subscriptions
+* Understand my spending habits
+
+6. Student interests / lifestyle personalisation
+   Add a field where the user can enter interests, such as:
+
+* matcha
+* coffee
+* restaurants
+* sports
+* gym
+* movies
+* cafés
+* shopping
+* nights out
+* groceries
+* books / study supplies
+
+The agent should use these interests to recommend relevant student-saving ideas. For example:
+
+* matcha or coffee: cheaper cafés, loyalty schemes, make-at-home options
+* sports: student gym deals, university sports sessions, second-hand sports kit
+* restaurants: student meal deals, lunch menus, group offers
+* movies: student cinema tickets, cheap screening days, streaming subscription comparison
+* groceries: cheaper supermarkets, store comparisons, meal planning ideas
+
+7. Student discounts and savings recommendations
+   Include recommendations for student-saving platforms and discount sources such as:
+
+* UNiDAYS
+* Student Beans
+* TOTUM
+* student loyalty apps
+* supermarket loyalty schemes
+* local student offers
+
+The app does not need live API integration for discounts in the MVP. Use a mock recommendation system or static examples based on the user’s categories and interests.
+
+8. Store price comparison for everyday spending
+   Add a simple mock price comparison section for groceries and essentials.
+   For example, if the user spends a lot on groceries, suggest comparing common items across stores.
+   Use mock data such as:
+
+* Tesco
+* Aldi
+* Lidl
+* Sainsbury’s
+* Asda
+
+Example output:
+“Your grocery spending is one of your top categories. Consider comparing weekly essentials like milk, pasta, rice, eggs, and snacks across Aldi/Lidl/Tesco. Switching some basics could save around £5–£15 per week.”
+
+This can use mock/static data for the MVP.
+
+9. Calendar / schedule awareness
+   Add an optional text field where the user can describe their weekly schedule.
+   Example:
+
+* “I have university Monday to Thursday and work Friday evening.”
+* “My busiest days are Tuesday and Thursday.”
+* “I usually go out on weekends.”
+
+The agent should use this to identify high-spending risk days.
+Example:
+“If your busiest days are Tuesday and Thursday, your takeaway spending may be linked to tiredness after university. Try planning two easy meals before those days.”
+
+Do not integrate a real calendar API for the MVP unless simple. A text input is enough.
+
+10. Email-style action support
+    Add a feature where the agent can draft useful messages, such as:
+
+* subscription cancellation email
+* refund request
+* student discount enquiry
+* budget accountability message to yourself
+
+Example:
+“Draft a polite cancellation email for an unused subscription.”
+
+This can be a generated text section, not real email sending.
+
+11. Persistence and memory
+    Add basic persistence so MoneyMirror remembers user preferences and past sessions locally.
+
+For the MVP, use a lightweight local storage approach:
+
+* If using Streamlit, use SQLite or a local JSON file.
+* If using React, use localStorage or a simple backend with SQLite.
+* Do not store sensitive raw transaction data by default unless the user explicitly chooses to save it.
+* Store only low-risk memory by default.
+
+The agent should remember:
+
+* user’s first name or display name if provided
+* savings goal
+* preferred spending categories to watch
+* interests such as matcha, movies, sports, restaurants, cafés, groceries, shopping
+* schedule notes, such as “busy on Tuesdays and Thursdays”
+* preferred tone, such as supportive, direct, or detailed
+* previous weekly action plan
+* previous estimated savings
+* whether the user wants reminders suggested
+
+Add a “Memory” or “Preferences” section where the user can:
+
+* view saved preferences
+* edit saved preferences
+* clear memory
+* choose whether to save the current session
+
+Add a simple “Save this plan” button that stores:
+
+* date/time of analysis
+* user goal
+* top spending categories
+* suggested actions
+* estimated savings
+* interests used for recommendations
+
+Add a “Previous Plans” section that shows saved weekly plans in a simple list.
+
+Important privacy rules:
+
+* Do not save raw bank transactions by default.
+* Use anonymised sample data in the demo.
+* Clearly state: “MoneyMirror saves preferences locally for demo purposes. Do not enter real sensitive banking data.”
+* Include a “Clear all saved data” button.
+
+12. Weekly action plan
+    The final output should include:
+
+* short spending summary
+* top spending categories
+* biggest behaviour pattern
+* personalised student-saving recommendations
+* relevant discounts or cheaper alternatives
+* grocery/store comparison suggestion if relevant
+* 3 realistic actions for the next week
+* estimated possible savings
+* optional reminder suggestions
+* option to save the action plan to local memory
+
+13. Safety / privacy
+    Add a clear note:
+
+* “Use anonymised sample data only.”
+* “MoneyMirror does not store raw financial data by default.”
+* “MoneyMirror saves preferences and plans locally only if the user chooses to save them.”
+* “This is budgeting support, not professional financial advice.”
+
+14. Demo experience
+    Create a strong sample demo dataset in the app so judges can click “Load sample student spending.”
+    The sample should include:
+
+* groceries
+* Uber Eats / takeaway
+* Starbucks or matcha/café spending
+* transport
+* Netflix or Spotify
+* cinema
+* restaurant
+* sports/gym
+* shopping
+
+Also create a sample saved memory profile:
+
+* name: Priyanshi
+* goal: Spend smarter on things I enjoy
+* interests: matcha, movies, restaurants, groceries, sports
+* busy days: Tuesday and Thursday
+* preferred tone: supportive and practical
+* watched categories: cafés, takeaway, groceries, subscriptions
+
+15. UI layout
+    Make the app visually clear and simple:
+
+* Title: MoneyMirror
+* Subtitle: “A student money-saving AI agent”
+* Input section
+* Goal and interests section
+* Optional schedule section
+* Memory / preferences section
+* Analyse button
+* Results cards:
+
+  * Spending breakdown
+  * Pattern detected
+  * Student discounts and alternatives
+  * Store price comparison
+  * Weekly action plan
+  * Draft message helper
+  * Save plan button
+  * Previous plans
+
+16. Tech approach
+    Use a simple stack suitable for a hackathon.
+    Preferred:
+
+* Streamlit + Python
+  or
+* React frontend with a simple backend
+
+If using Python:
+
+* Use pandas for parsing and calculations.
+* Use SQLite or a local JSON file for persistence.
+* Use a simple rule-based categoriser first.
+* Use the LLM only for explanation, pattern reasoning, and personalised recommendations.
+
+If using React:
+
+* Use localStorage for preferences and saved plans.
+* Keep mock data in JSON files.
+* Use a clean component structure.
+
+17. AI prompt behaviour
+    The AI should act as:
+    “A supportive student money coach that helps users understand spending habits, find student discounts, compare cheaper everyday options, remember preferences, and create realistic weekly actions.”
+
+Tone:
+
+* friendly
+* non-judgemental
+* practical
+* student-focused
+* clear and concise
+
+Avoid:
+
+* guilt-tripping
+* unrealistic advice
+* financial investment advice
+* pretending to access real bank accounts, emails, calendars, live store prices, or live student discount databases unless those tools are actually integrated
+* storing sensitive raw transaction data without explicit user action
+
+18. Expected final output example
+    After analysing spending, the app should produce something like:
+
+“Your biggest flexible spending areas are takeaway, cafés, and entertainment. You spent £64.30 on food outside groceries, which seems linked to busy university days and social plans.
+
+Because you mentioned matcha, movies, and restaurants, MoneyMirror suggests:
+
+* checking UNiDAYS or Student Beans for café and restaurant deals
+* using student cinema tickets or cheaper screening days
+* comparing grocery basics at Aldi, Lidl, and Tesco before your weekly shop
+* preparing two quick meals before your busiest days to reduce takeaway spending
+
+Your weekly plan:
+
+1. Set a £15 café/matcha limit.
+2. Plan two low-effort dinners for busy university days.
+3. Review one subscription before renewal.
+
+Estimated saving: £20–£35 this week.
+
+Would you like to save this plan to your local MoneyMirror memory?”
+
+19. Required output from Codex
+    Please generate:
+
+* file structure
+* full code
+* sample data
+* persistence/memory implementation
+* comments explaining important logic
+* instructions to run locally
+* any required dependencies
+* a short README
