@@ -70,6 +70,7 @@ docs/screenshots/memory-plans.png
 ```
 
 Markdown placeholders:
+## UI Screenshots
 
 ![Input screen](docs/screenshots/input-screen.png)
 ![Spending breakdown](docs/screenshots/results-breakdown.png)
@@ -96,6 +97,7 @@ Markdown placeholders:
 - Student discount and cheaper-alternative recommendations
 - Grocery price comparison across Aldi, Lidl, Tesco, Sainsbury's, and Asda
 - Optional live price lookup through SerpApi Google Shopping results
+- Grocery price comparison across Aldi, Lidl, Tesco, Sainsbury's, and Asda
 - Schedule-aware pattern detection
 - Chat interface for asking questions about the latest analysis
 - Draft message helper
