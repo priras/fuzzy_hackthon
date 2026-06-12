@@ -54,22 +54,7 @@ on AI-style guessing for the maths.
 - Downloadable weekly plan export.
 - Improved empty state before analysis.
 
-## Screenshots
 
-Add real screenshots after running the app locally.
-
-Suggested screenshot files:
-
-```text
-docs/screenshots/input-screen.png
-docs/screenshots/results-breakdown.png
-docs/screenshots/pattern-recommendations.png
-docs/screenshots/weekly-plan.png
-docs/screenshots/chat-coach.png
-docs/screenshots/memory-plans.png
-```
-
-Markdown placeholders:
 ## UI Screenshots
 
 ![Input screen](docs/screenshots/input-screen.png)
@@ -191,26 +176,6 @@ preferences and weekly plans locally when the user chooses to save them.
 
 This is budgeting support, not professional financial advice.
 
-## File Structure
-
-```text
-.
-├── app.py
-├── requirements.txt
-├── money_memory.json
-├── data/
-│   └── sample_student_transactions.csv
-├── AGENTS.md
-├── .opencode/
-│   └── skills/
-│       ├── analyse-spending/
-│       ├── create-money-checkin/
-│       ├── capture-note/
-│       └── recall/
-├── memory/
-└── docs/
-    └── screenshots/
-```
 
 ## How To Run Locally
 
