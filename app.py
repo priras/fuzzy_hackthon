@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from dataclasses import dataclass
 from datetime import datetime
@@ -8,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
+import requests
 import streamlit as st
 
 
@@ -148,6 +150,18 @@ MOCK_STORE_PRICES = pd.DataFrame(
 )
 
 
+STORE_ALIASES = {
+    "Tesco": ["tesco"],
+    "Aldi": ["aldi"],
+    "Lidl": ["lidl"],
+    "Sainsbury's": ["sainsbury", "sainsbury's"],
+    "Asda": ["asda"],
+}
+
+
+GROCERY_COMPARISON_ITEMS = ["milk", "pasta", "rice", "eggs", "snacks"]
+
+
 DEFAULT_MEMORY = {
     "profile": {
         "name": "Priyanshi",
@@ -219,6 +233,68 @@ def save_memory(memory: dict[str, Any]) -> None:
 
 def currency(value: float) -> str:
     return f"£{value:,.2f}"
+
+
+def format_price_value(value: Any) -> str:
+    if value is None or pd.isna(value):
+        return "Not found"
+    return currency(float(value))
+
+
+def format_price_table(prices: pd.DataFrame) -> pd.DataFrame:
+    display = prices.copy()
+    for column in display.columns:
+        if column != "Item":
+            display[column] = display[column].apply(format_price_value)
+    return display
+
+
+@st.cache_data(ttl=60 * 60)
+def fetch_live_store_prices(items: tuple[str, ...]) -> tuple[pd.DataFrame | None, str]:
+    api_key = os.getenv("SERPAPI_API_KEY")
+    if not api_key:
+        return None, "No SERPAPI_API_KEY found, so Budget Lens is showing demo prices."
+
+    rows = []
+    for item in items:
+        row: dict[str, Any] = {"Item": item.title()}
+        for store in STORE_ALIASES:
+            row[store] = None
+
+        params = {
+            "engine": "google_shopping",
+            "q": f"{item} UK grocery Tesco Aldi Lidl Sainsbury's Asda",
+            "gl": "uk",
+            "hl": "en",
+            "num": "30",
+            "api_key": api_key,
+        }
+
+        try:
+            response = requests.get("https://serpapi.com/search", params=params, timeout=12)
+            response.raise_for_status()
+            data = response.json()
+        except requests.RequestException as error:
+            return None, f"Live price lookup failed, so Budget Lens is showing demo prices. Reason: {error}"
+
+        for result in data.get("shopping_results", []):
+            price = result.get("extracted_price")
+            if price is None:
+                continue
+
+            result_text = f"{result.get('source', '')} {result.get('title', '')}".lower()
+            for store, aliases in STORE_ALIASES.items():
+                if row[store] is None and any(alias in result_text for alias in aliases):
+                    row[store] = float(price)
+
+        rows.append(row)
+
+    live_prices = pd.DataFrame(rows)
+    found_prices = live_prices.drop(columns=["Item"]).notna().sum().sum()
+    if found_prices == 0:
+        return None, "The API returned shopping results, but no matching supermarket prices were found. Showing demo prices."
+
+    return live_prices, "Live prices loaded from Google Shopping results via SerpApi. Treat them as indicative, not guaranteed shelf prices."
 
 
 def normalise_amount(raw_amount: Any) -> float:
@@ -658,6 +734,80 @@ def draft_support_message(message_type: str, name: str) -> str:
     )
 
 
+def chat_response(
+    user_message: str,
+    result: AnalysisResult | None,
+    profile: dict[str, Any],
+    plans: list[dict[str, Any]],
+) -> str:
+    message = user_message.lower()
+    name = profile.get("name") or "there"
+
+    if any(word in message for word in ["hi", "hello", "hey"]):
+        return (
+            f"Hi {name}. I can help you understand your spending, explain the latest analysis, "
+            "suggest student savings, or turn your results into a small weekly plan."
+        )
+
+    if any(word in message for word in ["privacy", "store", "stored", "data", "memory"]):
+        saved_count = len(plans)
+        return (
+            "Budget Lens does not save raw transactions by default. It stores low-risk preferences "
+            f"and saved weekly plans locally only when you choose. You currently have {saved_count} saved plan(s)."
+        )
+
+    if result is None:
+        return (
+            "Run an analysis first by loading sample spending or pasting anonymised transactions. "
+            "Then I can answer questions about your top categories, savings, patterns, and weekly actions."
+        )
+
+    if any(word in message for word in ["top", "category", "categories", "biggest"]):
+        return (
+            f"Your top categories are {', '.join(result.top_categories)}. "
+            f"Total analysed spending is {currency(result.total_spending)}."
+        )
+
+    if any(word in message for word in ["pattern", "habit", "why", "behaviour", "behavior"]):
+        return (
+            f"Your spending personality is {result.spending_personality}. "
+            f"{result.personality_reason} Pattern detected: {result.pattern}"
+        )
+
+    if any(word in message for word in ["plan", "action", "next week", "what should i do"]):
+        actions = "\n".join(f"{index}. {action}" for index, action in enumerate(result.actions, start=1))
+        return f"Here are your 3 actions for the week:\n\n{actions}"
+
+    if any(word in message for word in ["discount", "student", "deal", "cheaper", "alternative"]):
+        recs = "\n".join(f"- {rec}" for rec in result.recommendations)
+        return f"Here are the most relevant student-saving ideas:\n\n{recs}"
+
+    if any(word in message for word in ["keep", "cut", "reduce", "review"]):
+        sections = []
+        for section, items in result.keep_reduce_review.items():
+            joined = "\n".join(f"- {item}" for item in items)
+            sections.append(f"{section}:\n{joined}")
+        return "\n\n".join(sections)
+
+    if any(word in message for word in ["save", "saving", "savings"]):
+        reasons = " ".join(result.savings_explanation[:2])
+        return (
+            f"Your possible weekly saving is {currency(result.estimated_savings_low)}-"
+            f"{currency(result.estimated_savings_high)}. {reasons}"
+        )
+
+    if any(word in message for word in ["subscription", "cancel", "email", "message", "draft"]):
+        return result.draft_message
+
+    if any(word in message for word in ["goal", "focus"]):
+        return f"Your current goal is '{result.goal}'. Your goal focus is: {result.goal_focus}"
+
+    return (
+        "I can help with questions like: 'What are my top categories?', 'How can I save more?', "
+        "'What pattern do you see?', 'What should I do next week?', or 'Draft a cancellation message'."
+    )
+
+
 def analyse(
     transactions: pd.DataFrame,
     goal: str,
@@ -703,6 +853,18 @@ def render_metric_row(result: AnalysisResult) -> None:
     col3.metric(
         "Possible weekly saving",
         f"{currency(result.estimated_savings_low)}-{currency(result.estimated_savings_high)}",
+    )
+
+
+def render_card(title: str, body: str, tone: str = "blue") -> None:
+    st.markdown(
+        f"""
+        <div class="mm-card mm-card-{tone}">
+            <div class="mm-card-title">{title}</div>
+            <div class="mm-card-body">{body}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
 
@@ -804,15 +966,118 @@ def main() -> None:
             max-width: 1180px;
         }
 
+        .mm-hero {
+            border: 1px solid #c7d7ef;
+            border-radius: 12px;
+            padding: 26px 28px;
+            margin-bottom: 18px;
+            background:
+                radial-gradient(circle at top right, rgba(37, 99, 235, 0.22), transparent 32%),
+                linear-gradient(135deg, #f8fbff 0%, #e9f1ff 56%, #dce9fb 100%);
+            box-shadow: 0 18px 40px rgba(30, 58, 138, 0.10);
+        }
+
+        .mm-kicker {
+            color: var(--mm-blue);
+            font-size: 0.82rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .mm-hero h1 {
+            margin: 0;
+            color: #0f172a;
+            font-size: clamp(2.2rem, 4vw, 4.2rem);
+            line-height: 1;
+        }
+
+        .mm-hero p {
+            max-width: 720px;
+            margin: 12px 0 0 0;
+            color: #475569;
+            font-size: 1.05rem;
+            line-height: 1.55;
+        }
+
+        .mm-pill-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 18px;
+        }
+
+        .mm-pill {
+            border: 1px solid #c8d6ea;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.72);
+            color: #24405f;
+            font-size: 0.86rem;
+            font-weight: 650;
+            padding: 7px 11px;
+        }
+
+        .mm-card {
+            min-height: 132px;
+            border-radius: 10px;
+            padding: 18px;
+            border: 1px solid var(--mm-border);
+            background: #ffffff;
+            box-shadow: 0 12px 28px rgba(30, 58, 138, 0.07);
+            margin-bottom: 14px;
+        }
+
+        .mm-card-blue {
+            border-color: #b8cef4;
+            background: linear-gradient(180deg, #ffffff 0%, #eff6ff 100%);
+        }
+
+        .mm-card-grey {
+            border-color: #d7dee8;
+            background: linear-gradient(180deg, #ffffff 0%, #f3f6fa 100%);
+        }
+
+        .mm-card-title {
+            color: #0f172a;
+            font-size: 0.82rem;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .mm-card-body {
+            color: #334155;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        .mm-empty {
+            border: 1px dashed #b7c7df;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.66);
+            padding: 22px;
+            color: #475569;
+            text-align: center;
+        }
+
         h1 {
-            color: var(--mm-blue-dark);
+            color: #0f172a;
             font-weight: 800;
             letter-spacing: 0;
         }
 
         h2, h3 {
-            color: #24364f;
+            color: #111827;
             letter-spacing: 0;
+        }
+
+        div[data-testid="stMarkdownContainer"] h1,
+        div[data-testid="stMarkdownContainer"] h2,
+        div[data-testid="stMarkdownContainer"] h3,
+        div[data-testid="stMarkdownContainer"] h4 {
+            color: #111827;
         }
 
         .small-note {
@@ -853,6 +1118,8 @@ def main() -> None:
             border: 1px solid #b7c7df;
             color: #1f3351;
             background: #ffffff;
+            min-height: 2.65rem;
+            font-weight: 650;
         }
 
         .stButton > button:hover {
@@ -893,6 +1160,20 @@ def main() -> None:
         textarea, input, [data-baseweb="select"] {
             border-radius: 8px;
         }
+
+        div[data-testid="stFileUploader"] {
+            border: 1px solid var(--mm-border);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.72);
+            padding: 8px;
+        }
+
+        div[data-testid="stChatMessage"] {
+            border-radius: 10px;
+            border: 1px solid #d8e2f0;
+            background: #ffffff;
+            padding: 8px;
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -901,8 +1182,26 @@ def main() -> None:
     memory = load_memory()
     profile = memory["profile"]
 
-    st.title("Budget Lens")
-    st.subheader("A student money-saving AI agent")
+    st.markdown(
+        """
+        <section class="mm-hero">
+            <div class="mm-kicker">Student money coach</div>
+            <h1>Budget Lens</h1>
+            <p>
+                Turn messy student spending into clear patterns, realistic savings,
+                discount ideas, and one calm weekly action plan.
+            </p>
+            <div class="mm-pill-row">
+                <span class="mm-pill">Spending breakdown</span>
+                <span class="mm-pill">Goal-aware savings</span>
+                <span class="mm-pill">Student discounts</span>
+                <span class="mm-pill">Local memory</span>
+                <span class="mm-pill">Chat coach</span>
+            </div>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
     st.info(
         "Use anonymised sample data only. Budget Lens does not store raw financial data by default. "
         "Preferences and plans are saved locally only if you choose. This is budgeting support, not professional financial advice."
@@ -1023,7 +1322,15 @@ def main() -> None:
 
     result = st.session_state.get("result")
     if not result:
-        st.caption("Load the sample data or paste your own anonymised spending, then run the analysis.")
+        st.markdown(
+            """
+            <div class="mm-empty">
+                Load the sample student spending or paste anonymised transactions,
+                then click <strong>Analyse spending</strong> to generate your Budget Lens report.
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
         return
 
     st.header("Results")
@@ -1032,18 +1339,20 @@ def main() -> None:
 
     insight_col1, insight_col2 = st.columns([0.9, 1.1])
     with insight_col1:
-        st.subheader("Spending personality")
-        st.markdown(f"**{result.spending_personality}**")
-        st.write(result.personality_reason)
+        render_card(
+            "Spending personality",
+            f"<strong>{result.spending_personality}</strong><br>{result.personality_reason}",
+            "blue",
+        )
     with insight_col2:
-        st.subheader("Goal focus")
-        st.write(result.goal_focus)
+        render_card("Goal focus", result.goal_focus, "grey")
 
-    tab1, tab2, tab3, tab4 = st.tabs(
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(
         [
             "Spending breakdown",
             "Pattern and recommendations",
             "Weekly action plan",
+            "Chat with Budget Lens",
             "Memory and previous plans",
         ]
     )
@@ -1062,9 +1371,8 @@ def main() -> None:
         krr_cols = st.columns(3)
         for column, section in zip(krr_cols, ["Keep", "Reduce", "Review"]):
             with column:
-                st.markdown(f"**{section}**")
-                for item in result.keep_reduce_review[section]:
-                    st.write(f"- {item}")
+                body = "<br>".join(f"- {item}" for item in result.keep_reduce_review[section])
+                render_card(section, body, "blue" if section == "Keep" else "grey")
 
         st.subheader("Student discounts and alternatives")
         for rec in result.recommendations:
@@ -1072,10 +1380,25 @@ def main() -> None:
 
         st.subheader("Store price comparison")
         st.write(
-            "If groceries are one of your pressure areas, compare basics before the weekly shop. "
-            "Mock demo prices are shown below."
+            "If groceries are one of your pressure areas, compare basics before the weekly shop."
         )
-        st.dataframe(MOCK_STORE_PRICES, use_container_width=True, hide_index=True)
+        use_live_prices = st.checkbox(
+            "Try live grocery price lookup",
+            value=False,
+            help="Uses SerpApi Google Shopping results if SERPAPI_API_KEY is set. Falls back to demo prices.",
+        )
+        if use_live_prices:
+            live_prices, price_note = fetch_live_store_prices(tuple(GROCERY_COMPARISON_ITEMS))
+            if live_prices is not None:
+                st.dataframe(format_price_table(live_prices), use_container_width=True, hide_index=True)
+                st.caption(price_note)
+            else:
+                st.warning(price_note)
+                st.dataframe(format_price_table(MOCK_STORE_PRICES), use_container_width=True, hide_index=True)
+        else:
+            st.caption("Demo prices shown. Enable live lookup and set SERPAPI_API_KEY to query online shopping results.")
+            st.dataframe(format_price_table(MOCK_STORE_PRICES), use_container_width=True, hide_index=True)
+
         if "Groceries" in result.top_categories:
             st.success(
                 "Groceries are in your top categories. Switching some basics between Aldi, Lidl, and Tesco "
@@ -1116,6 +1439,38 @@ def main() -> None:
         )
 
     with tab4:
+        st.subheader("Chat with Budget Lens")
+        st.caption("Ask about your latest analysis. The chat uses local app context and does not save raw transactions.")
+
+        if "chat_messages" not in st.session_state:
+            st.session_state.chat_messages = [
+                {
+                    "role": "assistant",
+                    "content": "Hi, I am Budget Lens. Ask me what your top spending categories are, how to save this week, or what pattern I noticed.",
+                }
+            ]
+
+        for message in st.session_state.chat_messages:
+            with st.chat_message(message["role"]):
+                st.write(message["content"])
+
+        prompt = st.chat_input("Ask Budget Lens about your spending")
+        if prompt:
+            st.session_state.chat_messages.append({"role": "user", "content": prompt})
+            response = chat_response(prompt, result, profile, load_memory().get("plans", []))
+            st.session_state.chat_messages.append({"role": "assistant", "content": response})
+            st.rerun()
+
+        if st.button("Clear chat"):
+            st.session_state.chat_messages = [
+                {
+                    "role": "assistant",
+                    "content": "Chat cleared. Ask me about your latest Budget Lens analysis.",
+                }
+            ]
+            st.rerun()
+
+    with tab5:
         st.subheader("Saved preferences")
         st.json(load_memory()["profile"])
 
