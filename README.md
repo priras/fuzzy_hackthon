@@ -40,21 +40,7 @@ schedule notes, then gets:
 The app uses code for calculations and rules for categorisation. It does not rely
 on AI-style guessing for the maths.
 
-## Screenshots
-
-Add real screenshots after running the app locally.
-
-Suggested screenshot files:
-
-```text
-docs/screenshots/input-screen.png
-docs/screenshots/results-breakdown.png
-docs/screenshots/pattern-recommendations.png
-docs/screenshots/weekly-plan.png
-docs/screenshots/memory-plans.png
-```
-
-Markdown placeholders:
+## UI Screenshots
 
 ![Input screen](docs/screenshots/input-screen.png)
 ![Spending breakdown](docs/screenshots/results-breakdown.png)
@@ -78,7 +64,7 @@ Markdown placeholders:
 - Goal-specific focus card
 - Keep / Reduce / Review coaching
 - Student discount and cheaper-alternative recommendations
-- Mock grocery price comparison across Aldi, Lidl, Tesco, Sainsbury's, and Asda
+- Grocery price comparison across Aldi, Lidl, Tesco, Sainsbury's, and Asda
 - Schedule-aware pattern detection
 - Draft message helper
 - Save weekly plans locally
@@ -151,25 +137,6 @@ preferences and weekly plans locally when the user chooses to save them.
 
 This is budgeting support, not professional financial advice.
 
-## File Structure
-
-```text
-.
-├── app.py
-├── requirements.txt
-├── money_memory.json
-├── data/
-│   └── sample_student_transactions.csv
-├── AGENTS.md
-├── .opencode/
-│   └── skills/
-│       ├── analyse-spending/
-│       ├── create-money-checkin/
-│       ├── capture-note/
-│       └── recall/
-├── memory/
-└── docs/
-```
 
 ## How To Run Locally
 
